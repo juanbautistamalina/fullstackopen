@@ -3,17 +3,17 @@ import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 import personService from "./services/persons"
+import Notification from "./components/Notification"
 
 const App = () => {
   const [persons, setPersons] = useState([])
-
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
-
   const nameExist = persons.filter(p => p.name === newName)
-
   const [nameFilter, setNameFilter] = useState("")
   const personsFilter = persons.filter(p => p.name.toLowerCase().includes(nameFilter.toLowerCase()))
+  const [successMessage, setSuccessMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
 
   // Setear personas
   useEffect(() => {
@@ -34,7 +34,15 @@ const App = () => {
       confirm
         ? personService
           .update(person.id, { ...person, number: newNumber })
-          .then(updatedPerson => setPersons(persons.map(p => p.id !== person.id ? p : updatedPerson)))
+          .then(updatedPerson => {
+            setSuccessMessage(`${updatedPerson.name} number changed`)
+            setTimeout(() => setSuccessMessage(null), 5000)
+            setPersons(persons.map(p => p.id !== person.id ? p : updatedPerson))
+          })
+          .catch(() => {
+            setErrorMessage(`Information of ${person.name} has already been removed from server`)
+            setTimeout(() => setErrorMessage(null), 5000)
+          })
         : ""
 
       return;
@@ -45,6 +53,8 @@ const App = () => {
     personService
       .create(newPerson)
       .then(newPerson => {
+        setSuccessMessage(`Added ${newPerson.name}`)
+        setTimeout(() => setSuccessMessage(null), 5000)
         setPersons(persons.concat(newPerson))
         setNewName("")
         setNewNumber("")
@@ -64,6 +74,9 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      {successMessage && <Notification message={successMessage} />}
+      {errorMessage && <Notification message={errorMessage} isSuccess={false} />}
+
       <Filter nameFilter={nameFilter} setNameFilter={setNameFilter} />
 
       <h2>add a new</h2>
