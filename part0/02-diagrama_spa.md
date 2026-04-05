@@ -1,0 +1,28 @@
+```mermaid
+sequenceDiagram
+    participant browser
+    participant server
+
+    browser->>server: GET https://studies.cs.helsinki.fi/exampleapp/spa
+    Note right of browser: El navegador solicita la página principal de la aplicación SPA.
+    activate server
+    server-->>browser: HTML document
+    deactivate server
+
+    Note right of browser: El navegador recibe el documento HTML, que incluye referencias a los archivos CSS y JavaScript necesarios para la aplicación SPA.
+
+    browser->>server: GET https://studies.cs.helsinki.fi/exampleapp/main.css
+    activate server
+    server-->>browser: CSS file
+    deactivate server
+
+    browser->>server: GET https://studies.cs.helsinki.fi/exampleapp/spa.js
+    activate server
+    server-->>browser: JavaScript file
+    deactivate server
+
+    browser->>server: GET https://studies.cs.helsinki.fi/exampleapp/data.json
+    activate server
+    server-->>browser: JSON data
+    deactivate server
+```
