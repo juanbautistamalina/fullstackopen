@@ -114,28 +114,6 @@ Con esto, `json-server` expone automáticamente los endpoints `GET`, `POST`, `PU
 
 ---
 
-### Componentes
-
-Un componente es una función que recibe `props` y devuelve JSX. La regla principal: si un dato puede cambiar y debe reflejarse en la pantalla, usá `useState`.
-
-```jsx
-// Componente con props y estado local
-import { useState } from 'react'
-
-const Counter = ({ initialValue }) => {
-  const [count, setCount] = useState(initialValue)
-
-  return (
-    <div>
-      <p>Valor: {count}</p>
-      <button onClick={() => setCount(count + 1)}>Incrementar</button>
-    </div>
-  )
-}
-
-export default Counter
-```
-
 ### Hooks esenciales
 
 | Hook | Para qué sirve |
