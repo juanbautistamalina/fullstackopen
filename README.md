@@ -78,10 +78,65 @@ cd my-app
 npm install
 npm run dev
 ```
+---
+
+### Hooks esenciales
+
+Los hooks son funciones especiales de React que permiten usar estado y otras características dentro de componentes funcionales.
+
+| Hook | Para qué sirve |
+|---|---|
+| `useState` | Estado local del componente |
+| `useEffect` | Efectos secundarios (fetch, suscripciones) |
+| `useContext` | Compartir estado global sin prop drilling |
+| `useRef` | Referencia a un elemento del DOM |
+
+**`useState`** — maneja un valor que puede cambiar. Cada vez que cambia, React vuelve a renderizar el componente.
+
+```jsx
+import { useState } from 'react'
+
+const LightSwitch = () => {
+  const [isOn, setIsOn] = useState(false) // false es el valor inicial
+
+  return (
+    <button onClick={() => setIsOn(!isOn)}>
+      La luz está {isOn ? 'encendida' : 'apagada'}
+    </button>
+  )
+}
+```
+
+**`useEffect`** — ejecuta código como consecuencia de algo: que el componente se monte, que una variable cambie, etc. Se usa mucho para traer datos del backend al cargar la página.
+
+```jsx
+import { useState, useEffect } from 'react'
+
+const BookList = () => {
+  const [books, setBooks] = useState([])
+
+  useEffect(() => {
+    // Esto se ejecuta una sola vez, cuando el componente aparece en pantalla
+    fetch('/api/books')
+      .then(res => res.json())
+      .then(data => setBooks(data))
+  }, []) // El array vacío [] significa "solo al montar"
+
+  return (
+    <ul>
+      {books.map(book => <li key={book.id}>{book.title}</li>)}
+    </ul>
+  )
+}
+```
+
+> Si en vez de `[]` ponés una variable dentro del array, el efecto se vuelve a ejecutar cada vez que esa variable cambia.
+
+---
 
 ### Simular un backend con json-server
 
-Antes de tener un backend real, `json-server` permite simular una API REST completa a partir de un archivo JSON. Útil para desarrollar y testear el frontend de forma independiente.
+Antes de tener un backend real, `json-server` permite simular una API REST completa a partir de un archivo JSON. Es útil para desarrollar y testear el frontend de forma independiente, sin necesidad de escribir ningún código de servidor.
 
 ```bash
 npm install -D json-server
@@ -110,51 +165,53 @@ Agregar el script en `package.json`:
 npm run server
 ```
 
-Con esto, `json-server` expone automáticamente los endpoints `GET`, `POST`, `PUT` y `DELETE` en `http://localhost:3001/books`, sin escribir una sola línea de backend.
-
----
-
-### Hooks esenciales
-
-| Hook | Para qué sirve |
-|---|---|
-| `useState` | Estado local del componente |
-| `useEffect` | Efectos secundarios (fetch, suscripciones) |
-| `useContext` | Compartir estado global sin prop drilling |
-| `useRef` | Referencia a un elemento del DOM |
-
-```jsx
-// useEffect para traer datos al montar el componente
-useEffect(() => {
-  fetch('/api/items')
-    .then(res => res.json())
-    .then(data => setItems(data))
-}, []) // [] = solo se ejecuta una vez, al montar
-```
+Con esto, `json-server` expone automáticamente los endpoints `GET`, `POST`, `PUT` y `DELETE` en `http://localhost:3001/books`, sin escribir una sola línea de backend. El `bookService.js` de más abajo funciona igual contra este servidor simulado que contra uno real.
 
 ### Comunicación con el backend
 
-Usá `axios` o `fetch` para hacer peticiones HTTP al backend.
+En una aplicación full stack hay dos partes separadas: el **frontend** (React, corre en el navegador) y el **backend** (Node/Express, corre en un servidor). Para que se comuniquen, el frontend hace **peticiones HTTP** al backend usando `fetch` (nativo del navegador) o `axios` (una librería que simplifica la sintaxis y el manejo de errores).
+
+El backend recibe esa petición, hace lo que tenga que hacer (consultar la base de datos, guardar algo, etc.) y le devuelve una respuesta en formato JSON que el frontend puede usar para actualizar la pantalla.
 
 ```bash
 npm install axios
 ```
 
-```jsx
+Para mantener el código ordenado, las llamadas al backend no se hacen directamente dentro de los componentes, sino en archivos separados dentro de la carpeta `services/`. Cada archivo agrupa las peticiones de un recurso en particular.
+
+```js
+// src/services/bookService.js
 import axios from 'axios'
 
-// GET
-const { data } = await axios.get('/api/books')
+const BASE_URL = 'http://localhost:3001/api/books' // desarrollo (json-server o backend local)
+// const BASE_URL = '/api/books'                   // producción (mismo servidor que el frontend)
 
-// POST
-const { data } = await axios.post('/api/books', { title: 'Dune', author: 'Herbert' })
+const getAll = () =>
+  axios.get(BASE_URL).then(res => res.data)
 
-// PUT
-await axios.put(`/api/books/${id}`, updatedBook)
+const create = (newBook) =>
+  axios.post(BASE_URL, newBook).then(res => res.data)
 
-// DELETE
-await axios.delete(`/api/books/${id}`)
+const update = (id, updatedBook) =>
+  axios.put(`${BASE_URL}/${id}`, updatedBook).then(res => res.data)
+
+const remove = (id) =>
+  axios.delete(`${BASE_URL}/${id}`)
+
+export default { getAll, create, update, remove }
 ```
+
+Y desde el componente, simplemente se importa y se usa:
+
+```jsx
+import bookService from '../services/bookService'
+
+useEffect(() => {
+  bookService.getAll().then(data => setBooks(data))
+}, [])
+```
+
+
 
 ---
 
@@ -236,7 +293,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message })
 })
 ```
-
 
 ---
 
