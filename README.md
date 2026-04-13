@@ -14,6 +14,12 @@
 1. [Estructura del proyecto](#️-estructura-del-proyecto)
 2. [Frontend con React](#2-frontend-con-react)
 3. [Backend con Node.js y Express](#3-backend-con-nodejs-y-express)
+4. [Conectando frontend y backend](#4-conectando-frontend-y-backend)
+5. [Subir la aplicación a internet](#5-subir-la-aplicación-a-internet)
+
+---
+
+> 📝 **Proyecto de referencia:** todos los ejemplos de esta guía pertenecen a una **app de notas** — una aplicación simple que permite crear, leer y eliminar notas.
 
 ---
 
@@ -22,15 +28,15 @@
 La forma más ordenada de organizar una aplicación full stack es separar el frontend y el backend en carpetas independientes dentro del mismo repositorio.
 
 ```
-my-app/
+notes-app/
 ├── frontend/
 │   ├── public/
 │   ├── src/
-│   │   ├── components/        # Componentes reutilizables (Button, Card, Modal...)
-│   │   ├── pages/             # Vistas/páginas completas (Home, Login, Dashboard...)
+│   │   ├── components/        # Componentes reutilizables (Button, Note, Form...)
+│   │   ├── pages/             # Vistas/páginas completas (Home, Login...)
 │   │   ├── services/          # Lógica de comunicación con la API (axios)
-│   │   ├── context/           # Contextos de React (AuthContext, ThemeContext...)
-│   │   ├── hooks/             # Custom hooks (useAuth, useFetch...)
+│   │   ├── context/           # Contextos de React (AuthContext...)
+│   │   ├── hooks/             # Custom hooks (useNotes, useFetch...)
 │   │   ├── assets/            # Imágenes, íconos, fuentes
 │   │   ├── App.jsx
 │   │   └── main.jsx
@@ -41,9 +47,9 @@ my-app/
 ├── backend/
 │   ├── prisma/
 │   │   └── schema.prisma      # Modelos de la base de datos
-│   ├── routes/                # Rutas por recurso (books.js, users.js...)
+│   ├── routes/                # Rutas por recurso (notes.js, users.js...)
 │   ├── middleware/            # Middlewares propios (auth.js, errorHandler.js...)
-│   ├── controllers/           # Lógica de cada ruta (opcional, para mantener las rutas limpias)
+│   ├── controllers/           # Lógica de cada ruta (opcional)
 │   ├── index.js               # Punto de entrada del servidor
 │   ├── .env                   # DATABASE_URL, JWT_SECRET, PORT
 │   └── package.json
@@ -54,15 +60,15 @@ my-app/
 
 > **Nota:** tanto `frontend/.env` como `backend/.env` deben estar en el `.gitignore`. Nunca se commitean.
 
-### ¿Qué va en cada carpeta del frontend?
+<!-- ### ¿Qué va en cada carpeta del frontend?
 
 | Carpeta | Qué contiene |
 |---|---|
 | `components/` | Piezas de UI reutilizables que no son una página completa |
 | `pages/` | Un componente por cada ruta de la app (lo que renderiza React Router) |
-| `services/` | Funciones que llaman a la API, por ejemplo `bookService.getAll()` |
+| `services/` | Funciones que llaman a la API, por ejemplo `noteService.getAll()` |
 | `context/` | Estado global compartido entre componentes sin prop drilling |
-| `hooks/` | Lógica reutilizable que usa hooks de React |
+| `hooks/` | Lógica reutilizable que usa hooks de React | -->
 
 ---
 
@@ -73,12 +79,29 @@ El frontend es la parte de la aplicación que ve el usuario. Con React construim
 ### Crear el proyecto
 
 ```bash
-npm create vite@latest my-app -- --template react
-cd my-app
+npm create vite@latest frontend -- --template react
+cd frontend
 npm install
 npm run dev
 ```
----
+
+### Componentes
+
+Un componente es una función que recibe `props` y devuelve JSX. La regla principal: si un dato puede cambiar y debe reflejarse en la pantalla, usá `useState`.
+
+```jsx
+// components/Note.jsx
+const Note = ({ note, onDelete }) => {
+  return (
+    <li>
+      {note.content}
+      <button onClick={() => onDelete(note.id)}>Eliminar</button>
+    </li>
+  )
+}
+
+export default Note
+```
 
 ### Hooks esenciales
 
@@ -96,13 +119,23 @@ Los hooks son funciones especiales de React que permiten usar estado y otras car
 ```jsx
 import { useState } from 'react'
 
-const LightSwitch = () => {
-  const [isOn, setIsOn] = useState(false) // false es el valor inicial
+const App = () => {
+  const [notes, setNotes] = useState([])
+  const [newNote, setNewNote] = useState('')
+
+  const addNote = () => {
+    setNotes(notes.concat({ id: Date.now(), content: newNote }))
+    setNewNote('')
+  }
 
   return (
-    <button onClick={() => setIsOn(!isOn)}>
-      La luz está {isOn ? 'encendida' : 'apagada'}
-    </button>
+    <div>
+      <input value={newNote} onChange={e => setNewNote(e.target.value)} />
+      <button onClick={addNote}>Agregar</button>
+      <ul>
+        {notes.map(note => <li key={note.id}>{note.content}</li>)}
+      </ul>
+    </div>
   )
 }
 ```
@@ -111,32 +144,29 @@ const LightSwitch = () => {
 
 ```jsx
 import { useState, useEffect } from 'react'
+import noteService from './services/noteService'
 
-const BookList = () => {
-  const [books, setBooks] = useState([])
+const App = () => {
+  const [notes, setNotes] = useState([])
 
   useEffect(() => {
     // Esto se ejecuta una sola vez, cuando el componente aparece en pantalla
-    fetch('/api/books')
-      .then(res => res.json())
-      .then(data => setBooks(data))
+    noteService.getAll().then(data => setNotes(data))
   }, []) // El array vacío [] significa "solo al montar"
 
-  return (
-    <ul>
-      {books.map(book => <li key={book.id}>{book.title}</li>)}
-    </ul>
-  )
+  // ...
 }
 ```
 
-> Si en vez de `[]` ponés una variable dentro del array, el efecto se vuelve a ejecutar cada vez que esa variable cambia.
+> Si en vez de `[]` ponés una variable dentro del array, el efecto se vuelve a ejecutar cada vez que esa variable cambia: `[userId]`.
 
 ---
 
+Durante el desarrollo del frontend, todavía no tenemos un backend propio. Para no bloquearnos, usamos `json-server` para simular uno.
+
 ### Simular un backend con json-server
 
-Antes de tener un backend real, `json-server` permite simular una API REST completa a partir de un archivo JSON. Es útil para desarrollar y testear el frontend de forma independiente, sin necesidad de escribir ningún código de servidor.
+`json-server` genera una API REST completa a partir de un archivo JSON, sin escribir ningún código de servidor. Es la herramienta ideal para avanzar con el frontend mientras el backend todavía no existe.
 
 ```bash
 npm install -D json-server
@@ -146,9 +176,9 @@ Crear un archivo `db.json` en la raíz del proyecto:
 
 ```json
 {
-  "books": [
-    { "id": 1, "title": "Dune", "author": "Herbert" },
-    { "id": 2, "title": "1984", "author": "Orwell" }
+  "notes": [
+    { "id": 1, "content": "HTML es fácil", "important": true },
+    { "id": 2, "content": "El navegador solo puede ejecutar JavaScript", "important": false }
   ]
 }
 ```
@@ -165,35 +195,39 @@ Agregar el script en `package.json`:
 npm run server
 ```
 
-Con esto, `json-server` expone automáticamente los endpoints `GET`, `POST`, `PUT` y `DELETE` en `http://localhost:3001/books`, sin escribir una sola línea de backend. El `bookService.js` de más abajo funciona igual contra este servidor simulado que contra uno real.
+Con esto, `json-server` expone automáticamente los endpoints `GET`, `POST`, `PUT` y `DELETE` en `http://localhost:3001/notes`. Más adelante, cuando el backend real esté listo, simplemente se cambia la URL y el resto del código no cambia.
+
+---
+
+Con un servidor disponible (ya sea json-server o el backend real), el siguiente paso es conectar el frontend a él mediante peticiones HTTP.
 
 ### Comunicación con el backend
 
 En una aplicación full stack hay dos partes separadas: el **frontend** (React, corre en el navegador) y el **backend** (Node/Express, corre en un servidor). Para que se comuniquen, el frontend hace **peticiones HTTP** al backend usando `fetch` (nativo del navegador) o `axios` (una librería que simplifica la sintaxis y el manejo de errores).
 
-El backend recibe esa petición, hace lo que tenga que hacer (consultar la base de datos, guardar algo, etc.) y le devuelve una respuesta en formato JSON que el frontend puede usar para actualizar la pantalla.
+El backend recibe esa petición, hace lo que tenga que hacer (consultar la base de datos, guardar algo, etc.) y le devuelve una respuesta en formato JSON que el frontend usa para actualizar la pantalla.
 
 ```bash
 npm install axios
 ```
 
-Para mantener el código ordenado, las llamadas al backend no se hacen directamente dentro de los componentes, sino en archivos separados dentro de la carpeta `services/`. Cada archivo agrupa las peticiones de un recurso en particular.
+Para mantener el código ordenado, las llamadas al backend no van directamente dentro de los componentes, sino en archivos separados dentro de `services/`. Cada archivo agrupa las peticiones de un recurso.
 
 ```js
-// src/services/bookService.js
+// src/services/noteService.js
 import axios from 'axios'
 
-const BASE_URL = 'http://localhost:3001/api/books' // desarrollo (json-server o backend local)
-// const BASE_URL = '/api/books'                   // producción (mismo servidor que el frontend)
+const BASE_URL = 'http://localhost:3001/api/notes' // desarrollo (json-server o backend local)
+// const BASE_URL = '/api/notes'                   // producción (mismo servidor que el frontend)
 
 const getAll = () =>
   axios.get(BASE_URL).then(res => res.data)
 
-const create = (newBook) =>
-  axios.post(BASE_URL, newBook).then(res => res.data)
+const create = (newNote) =>
+  axios.post(BASE_URL, newNote).then(res => res.data)
 
-const update = (id, updatedBook) =>
-  axios.put(`${BASE_URL}/${id}`, updatedBook).then(res => res.data)
+const update = (id, updatedNote) =>
+  axios.put(`${BASE_URL}/${id}`, updatedNote).then(res => res.data)
 
 const remove = (id) =>
   axios.delete(`${BASE_URL}/${id}`)
@@ -204,20 +238,27 @@ export default { getAll, create, update, remove }
 Y desde el componente, simplemente se importa y se usa:
 
 ```jsx
-import bookService from '../services/bookService'
+import noteService from './services/noteService'
 
+// Traer todas las notas al montar
 useEffect(() => {
-  bookService.getAll().then(data => setBooks(data))
+  noteService.getAll().then(data => setNotes(data))
 }, [])
+
+// Crear una nota nueva
+const addNote = () => {
+  noteService.create({ content: newNote, important: false })
+    .then(savedNote => setNotes(notes.concat(savedNote)))
+}
 ```
 
-
+Con el frontend funcionando y conectado al servidor simulado, es momento de construir el backend real.
 
 ---
 
 ## 3. Backend con Node.js y Express
 
-El backend expone una **API REST**: recibe peticiones HTTP del frontend, las procesa y devuelve datos (generalmente en JSON).
+El backend expone una **API REST**: recibe peticiones HTTP del frontend, las procesa y devuelve datos en JSON. Es un programa Node.js independiente que corre en su propio servidor.
 
 ### Inicializar el proyecto
 
@@ -228,7 +269,7 @@ npm install express cors dotenv
 npm install --save-dev nodemon
 ```
 
-En `package.json`, agregá el script de desarrollo:
+En `package.json`, agregar los scripts:
 
 ```json
 "scripts": {
@@ -247,39 +288,31 @@ require('dotenv').config()
 
 const app = express()
 
-// Middlewares
 app.use(cors())
-app.use(express.json()) // Parsea el body de las peticiones como JSON
+app.use(express.json())
 
-// Rutas
-app.get('/api/books', (req, res) => {
-  res.json({ message: 'Lista de libros' })
+let notes = [
+  { id: 1, content: 'HTML es fácil', important: true },
+  { id: 2, content: 'El navegador solo puede ejecutar JavaScript', important: false }
+]
+
+app.get('/api/notes', (req, res) => {
+  res.json(notes)
+})
+
+app.post('/api/notes', (req, res) => {
+  const note = { id: Date.now(), ...req.body }
+  notes = notes.concat(note)
+  res.status(201).json(note)
+})
+
+app.delete('/api/notes/:id', (req, res) => {
+  notes = notes.filter(n => n.id !== Number(req.params.id))
+  res.status(204).end()
 })
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`))
-```
-
-### Organización de rutas con Router
-
-Separar las rutas en archivos propios mantiene el código ordenado.
-
-```js
-// routes/books.js
-const router = require('express').Router()
-
-router.get('/', (req, res) => { /* ... */ })
-router.post('/', (req, res) => { /* ... */ })
-router.put('/:id', (req, res) => { /* ... */ })
-router.delete('/:id', (req, res) => { /* ... */ })
-
-module.exports = router
-```
-
-```js
-// index.js
-const booksRouter = require('./routes/books')
-app.use('/api/books', booksRouter)
 ```
 
 ### Middleware
@@ -287,12 +320,109 @@ app.use('/api/books', booksRouter)
 Un middleware es una función que se ejecuta **entre** la petición y la respuesta. Se usa para logging, autenticación, manejo de errores, etc.
 
 ```js
-// Middleware de manejo de errores (siempre al final)
+// Middleware de manejo de errores (siempre al final, después de todas las rutas)
 app.use((err, req, res, next) => {
   console.error(err.message)
   res.status(500).json({ error: err.message })
 })
 ```
+
+---
+
+Con el backend corriendo en `localhost:3001` y el frontend en `localhost:5173`, surge un problema: el navegador bloquea las peticiones entre orígenes distintos. Eso es CORS.
+
+---
+
+## 4. Conectando frontend y backend
+
+### ¿Qué es CORS y por qué ocurre?
+
+**CORS (Cross-Origin Resource Sharing)** es una política de seguridad del navegador. Cuando el frontend (corriendo en `localhost:5173`) intenta hacer una petición al backend (corriendo en `localhost:3001`), el navegador los considera **orígenes distintos** y bloquea la petición por defecto.
+
+El error típico que se ve en la consola es:
+
+```
+Access to XMLHttpRequest at 'http://localhost:3001/api/notes'
+from origin 'http://localhost:5173' has been blocked by CORS policy.
+```
+
+**La solución:** instalar el middleware `cors` en el backend para que acepte peticiones desde otros orígenes.
+
+```bash
+# En el backend
+npm install cors
+```
+
+```js
+const cors = require('cors')
+app.use(cors()) // Permite peticiones desde cualquier origen
+```
+
+Esto ya estaba incluido en la estructura básica del servidor de arriba. Lo importante es entender **por qué está**: sin esa línea, el frontend no puede hablar con el backend durante el desarrollo.
+
+---
+
+Una vez que el backend funciona correctamente con el frontend en desarrollo, el siguiente paso es preparar la aplicación para producción — es decir, unir todo en un solo servidor listo para subir a internet.
+
+### Frontend Production Build
+
+Cuando la aplicación está lista para publicarse, el frontend necesita ser **compilado**. Este proceso convierte todo el código React (JSX, módulos, etc.) en archivos HTML, CSS y JavaScript estáticos optimizados para el navegador.
+
+```bash
+# Dentro de la carpeta frontend/
+npm run build
+```
+
+Esto genera una carpeta `dist/` con los archivos listos para producción. Esos archivos son los que el usuario final recibe cuando visita la app.
+
+### Sirviendo el frontend desde el backend
+
+En producción, no corremos dos servidores separados. En cambio, el backend de Express sirve también los archivos estáticos del frontend. Esto simplifica el deploy: un solo servidor, una sola URL.
+
+Para lograrlo, copiamos (o apuntamos) la carpeta `dist/` del frontend al backend, y agregamos esta línea en `index.js`:
+
+```js
+app.use(express.static('dist'))
+```
+
+Con esto, cuando alguien visita la URL raíz del servidor (por ejemplo `https://mi-app.onrender.com`), Express devuelve el `index.html` del frontend. Y cuando el frontend hace peticiones a `/api/notes`, el mismo servidor las responde. Todo desde un solo proceso.
+
+> En desarrollo seguimos corriendo los dos servidores por separado. Este paso es solo para producción.
+
+---
+
+Con la app lista y funcionando localmente en modo producción, el paso final es subirla a internet.
+
+---
+
+## 5. Subir la aplicación a internet
+
+Para publicar la aplicación se usa un **PaaS (Platform as a Service)**: una plataforma que se encarga de correr el servidor, sin necesidad de configurar infraestructura propia. Las más usadas por la comunidad en 2026 que ofrecen plan gratuito son:
+
+| Plataforma | Qué ofrece gratis |
+|---|---|
+| [Render](https://render.com/) | Web services, bases de datos PostgreSQL (90 días), deploy desde GitHub |
+| [Railway](https://railway.app/) | $5 de crédito mensual, PostgreSQL incluido, muy simple de configurar |
+| [Fly.io](https://fly.io/) | Hasta 3 VMs pequeñas, buena performance, requiere CLI |
+
+> Full Stack Open menciona también Cyclic, Replit y CodeSandbox, pero hoy en día **Render** y **Railway** son las opciones más usadas para proyectos Node.js + PostgreSQL.
+
+### Deploy en Render (recomendado para empezar)
+
+1. Crear una cuenta en [render.com](https://render.com/) y conectar con GitHub
+2. **New → Web Service** → seleccionar el repositorio
+3. Configurar:
+   - **Build Command:** `npm install`
+   - **Start Command:** `node index.js`
+4. En **Environment Variables**, agregar las variables del `.env`:
+   ```
+   PORT=3001
+   DATABASE_URL=...
+   JWT_SECRET=...
+   ```
+5. Hacer click en **Deploy**. Render detecta los cambios en `main` y redeploya automáticamente.
+
+La URL pública que genera Render (por ejemplo `https://notes-app.onrender.com`) es la dirección final de la aplicación. Esa misma URL va en la variable de entorno del frontend si usás Vercel para el frontend por separado, o simplemente es la URL que el usuario visita si servís el frontend desde el backend como se explicó arriba.
 
 ---
 
