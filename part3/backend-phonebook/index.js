@@ -1,7 +1,25 @@
 const express = require("express");
 const morgan = require("morgan");
+const cors = require("cors");
+
 const app = express();
+
 app.use(express.json());
+app.use(cors());
+
+// Creando un token personalizado
+morgan.token("body", (request, response) => request.method === "POST" ? JSON.stringify(request.body) : "")
+
+app.use(morgan((tokens, req, res) => {
+  return [
+    tokens.method(req, res),
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, 'content-length'), '-',
+    tokens['response-time'](req, res), 'ms',
+    tokens.body(req, res)
+  ].join(' ')
+}))
 
 let persons = [
   {
@@ -25,31 +43,6 @@ let persons = [
     number: "39-23-6423122",
   },
 ];
-
-// Middleware básico
-// app.use((request, response, next) => {
-//   console.log("Method:", request.method);
-//   console.log("Path:  ", request.path);
-//   console.log("Body:  ", request.body);
-//   console.log("---");
-//   next();
-// });
-
-// Creando un token personalizado
-morgan.token("body", (request, response) => request.method === "POST" ? JSON.stringify(request.body) : "")
-
-// Middleware Morgan
-app.use(morgan((tokens, req, res) => {
-    // console.log(req)
-  return [
-    tokens.method(req, res),
-    tokens.url(req, res),
-    tokens.status(req, res),
-    tokens.res(req, res, 'content-length'), '-',
-    tokens['response-time'](req, res), 'ms',
-    tokens.body(req, res)
-  ].join(' ')
-}))
 
 app.get("/", (request, response) => {
   response.send("<h1>Phonebook</h1>");
