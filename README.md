@@ -3,9 +3,26 @@
 > Repositorio de ejercicios del curso [Full Stack Open](https://fullstackopen.com/) de la Universidad de Helsinki.  
 > Además de los ejercicios, este README funciona como mi **guía de referencia personal** para construir una aplicación web full stack desde cero.
 
+![Full Stack Open – University of Helsinki](./assets/home.png)
+
 ---
 
-![Full Stack Open – University of Helsinki](./assets/home.png)
+> 📝 **Proyecto de referencia:** todos los ejemplos de esta guía pertenecen a una **app de notas** — una aplicación simple que permite crear, leer y eliminar notas.
+
+---
+
+## 🛠️ Stack utilizado
+
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+
+---
+
+## 📕 Documentación oficial
+- [Documentación de React](https://react.dev/)
+- [Documentación de Node.js](https://nodejs.org/en/docs/)
+- [Documentación de Express](https://expressjs.com/)
 
 ---
 
@@ -13,13 +30,10 @@
 
 1. [Estructura del proyecto](#️-estructura-del-proyecto)
 2. [Frontend con React](#2-frontend-con-react)
-3. [Backend con Node.js y Express](#3-backend-con-nodejs-y-express)
-4. [Conectando frontend y backend](#4-conectando-frontend-y-backend)
-5. [Subir la aplicación a internet](#5-subir-la-aplicación-a-internet)
-
----
-
-> 📝 **Proyecto de referencia:** todos los ejemplos de esta guía pertenecen a una **app de notas** — una aplicación simple que permite crear, leer y eliminar notas.
+3. [Simulando un backend con json-server](#3-simulando-un-backend-con-json-server)
+4. [Backend con Node.js y Express](#4-backend-con-nodejs-y-express)
+5. [Conectando frontend y backend](#5-conectando-frontend-y-backend)
+6. [Subir la aplicación a internet](#6-subir-la-aplicación-a-internet)
 
 ---
 
@@ -59,16 +73,6 @@ notes-app/
 ```
 
 > **Nota:** tanto `frontend/.env` como `backend/.env` deben estar en el `.gitignore`. Nunca se commitean.
-
-<!-- ### ¿Qué va en cada carpeta del frontend?
-
-| Carpeta | Qué contiene |
-|---|---|
-| `components/` | Piezas de UI reutilizables que no son una página completa |
-| `pages/` | Un componente por cada ruta de la app (lo que renderiza React Router) |
-| `services/` | Funciones que llaman a la API, por ejemplo `noteService.getAll()` |
-| `context/` | Estado global compartido entre componentes sin prop drilling |
-| `hooks/` | Lógica reutilizable que usa hooks de React | -->
 
 ---
 
@@ -162,11 +166,9 @@ const App = () => {
 
 ---
 
-Durante el desarrollo del frontend, todavía no tenemos un backend propio. Para no bloquearnos, usamos `json-server` para simular uno.
+## 3. Simulando un backend con json-server
 
-### Simular un backend con json-server
-
-`json-server` genera una API REST completa a partir de un archivo JSON, sin escribir ningún código de servidor. Es la herramienta ideal para avanzar con el frontend mientras el backend todavía no existe.
+Durante el desarrollo del frontend, todavía no tenemos un backend propio. Para no bloquearnos, `json-server` genera una API REST completa a partir de un archivo JSON, sin escribir ningún código de servidor.
 
 ```bash
 npm install -D json-server
@@ -196,10 +198,6 @@ npm run server
 ```
 
 Con esto, `json-server` expone automáticamente los endpoints `GET`, `POST`, `PUT` y `DELETE` en `http://localhost:3001/notes`. Más adelante, cuando el backend real esté listo, simplemente se cambia la URL y el resto del código no cambia.
-
----
-
-Con un servidor disponible (ya sea json-server o el backend real), el siguiente paso es conectar el frontend a él mediante peticiones HTTP.
 
 ### Comunicación con el backend
 
@@ -256,7 +254,7 @@ Con el frontend funcionando y conectado al servidor simulado, es momento de cons
 
 ---
 
-## 3. Backend con Node.js y Express
+## 4. Backend con Node.js y Express
 
 El backend expone una **API REST**: recibe peticiones HTTP del frontend, las procesa y devuelve datos en JSON. Es un programa Node.js independiente que corre en su propio servidor.
 
@@ -315,6 +313,28 @@ const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`))
 ```
 
+### Organización de rutas con Router
+
+A medida que la app crece, conviene separar las rutas en archivos propios para mantener el código ordenado.
+
+```js
+// routes/notes.js
+const router = require('express').Router()
+
+router.get('/', (req, res) => { /* devolver todas las notas */ })
+router.post('/', (req, res) => { /* crear una nota */ })
+router.put('/:id', (req, res) => { /* actualizar una nota */ })
+router.delete('/:id', (req, res) => { /* eliminar una nota */ })
+
+module.exports = router
+```
+
+```js
+// index.js — registrar el router
+const notesRouter = require('./routes/notes')
+app.use('/api/notes', notesRouter)
+```
+
 ### Middleware
 
 Un middleware es una función que se ejecuta **entre** la petición y la respuesta. Se usa para logging, autenticación, manejo de errores, etc.
@@ -333,7 +353,7 @@ Con el backend corriendo en `localhost:3001` y el frontend en `localhost:5173`, 
 
 ---
 
-## 4. Conectando frontend y backend
+## 5. Conectando frontend y backend
 
 ### ¿Qué es CORS y por qué ocurre?
 
@@ -395,7 +415,7 @@ Con la app lista y funcionando localmente en modo producción, el paso final es 
 
 ---
 
-## 5. Subir la aplicación a internet
+## 6. Subir la aplicación a internet
 
 Para publicar la aplicación se usa un **PaaS (Platform as a Service)**: una plataforma que se encarga de correr el servidor, sin necesidad de configurar infraestructura propia. Las más usadas por la comunidad en 2026 que ofrecen plan gratuito son:
 
@@ -423,14 +443,6 @@ Para publicar la aplicación se usa un **PaaS (Platform as a Service)**: una pla
 5. Hacer click en **Deploy**. Render detecta los cambios en `main` y redeploya automáticamente.
 
 La URL pública que genera Render (por ejemplo `https://notes-app.onrender.com`) es la dirección final de la aplicación. Esa misma URL va en la variable de entorno del frontend si usás Vercel para el frontend por separado, o simplemente es la URL que el usuario visita si servís el frontend desde el backend como se explicó arriba.
-
----
-
-## 🛠️ Stack utilizado
-
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
 
 ---
 
