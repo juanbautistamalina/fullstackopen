@@ -1,8 +1,15 @@
-function Countries({ countries, handleShow }) {
+const Countries = ({ countries, onClick }) => {
+
+    if (countries.length === 0) return <p>No matches found</p>
+    else if (countries.length > 10) return <p>Too many matches, specify another filter</p>
+
     return (
         <ul>
-            {countries.map(c =>
-                <li key={c.flag}>{c.name.common} <button onClick={() => handleShow(c)}>show</button></li>)}
+            {countries.map(country =>
+                <li key={country.name.common}>
+                    {country.name.common}
+                    <button onClick={() => onClick(country)}>Show</button>
+                </li>)}
         </ul>
     )
 }

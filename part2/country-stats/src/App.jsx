@@ -1,50 +1,52 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from 'react'
 import axios from "axios"
-import Notification from "./components/Notification"
-import Countries from "./components/Countries"
-import CountryCard from "./components/CountryCard"
+import Country from './components/Country';
+import Countries from './components/Countries';
 
 function App() {
-  const [country, setCountry] = useState([])
-  const [input, setInput] = useState("")
-  const [message, setMessage] = useState("")
+  const [allCountries, setAllCountries] = useState([]);
+  const [country, setCountry] = useState(null)
+  const [loading, setLoading] = useState(false);
+  const [text, setText] = useState("");
 
+  // Obtener todos los países de la API luego del primer render
   useEffect(() => {
-    if (input) {
-      axios
-        .get("https://studies.cs.helsinki.fi/restcountries/api/all")
-        .then(response => {
-          const allCountry = response.data
-          const coincidences = allCountry.filter(c => c.name.common.toLowerCase().includes(input.toLowerCase()))
-          setMessage(null)
-          setCountry([])
+    setLoading(true)
+    axios.get("https://studies.cs.helsinki.fi/restcountries/api/all")
+      .then(response => {
+        const { data } = response
+        setAllCountries(data)
+        setLoading(false)
+      })
+  }, [])
 
-          if (coincidences.length > 10) {
-            setMessage("Too many matches")
-            return;
-          }
+  // En base a lo que el usuario escriba, mostrar países que tengan coincidencias en el nombre
+  const countriesList = text
+    ? allCountries.filter(country => country.name.common.toLowerCase().includes(text.toLowerCase()))
+    : allCountries
 
-          else if (coincidences.length === 0) {
-            setMessage("No matches found")
-            return;
-          }
+  // Función que se ejecuta cada vez que el usuario escribe en el input
+  const handleChange = () => {
+    setText(event.target.value)
 
-          setCountry(coincidences)
-
-        })
+    // Utilizar el valor actual del input (event.target.value) para ver si hay un único país
+    const coincidences = allCountries.filter(country => country.name.common.toLowerCase().includes(event.target.value.toLowerCase()))
+    if (coincidences.length === 1) {
+      return setCountry(coincidences[0])
     }
-  }, [input])
+    setCountry(null)
+  }
 
-  const handleShow = (country) => setCountry([country])
+  const render = loading
+    ? <p>Loading...</p>
+    : country
+      ? <Country country={country} />
+      : <Countries countries={countriesList} onClick={(newCountry) => setCountry(newCountry)} />
 
   return (
     <>
-      <label style={{ margin: "1em" }}>find countries</label>
-      <input type="text" value={input} onChange={(e) => setInput(e.target.value)} />
-
-      {country.length === 1 ? <CountryCard country={country[0]} /> : <Countries countries={country} handleShow={handleShow} />}
-
-      <Notification message={message} />
+      <p>find countries <input value={text} onChange={handleChange} /></p>
+      {render}
     </>
   )
 }
