@@ -1,11 +1,9 @@
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
 
-app.use(express.static('dist'))
 app.use(express.json());
-app.use(cors())
+app.use(cors());
 
 let notes = [
   {
@@ -27,7 +25,7 @@ let notes = [
 
 // Página Principal
 app.get("/", (request, response) => {
-  response.send("<h1>Notes</h1>");
+  response.send("<h1>Notes App</h1>");
 });
 
 // Obtener Todos los recursos
@@ -54,34 +52,40 @@ app.delete("/api/notes/:id", (request, response) => {
   response.status(204).end();
 });
 
-const generateId = () => {
-  const maxId =
-    notes.length > 0 ? Math.max(...notes.map((note) => note.id)) : 0;
-
-  return maxId + 1;
-};
-
 // Agregar un nuevo recurso
 app.post("/api/notes", (request, response) => {
+  
+  // Obtener la información enviada en el body de la petición
   const body = request.body;
 
-  if (!body.content) {
+  // Comprobar que el body no se haya enviado vacío
+  if (!body || !body.content) {
     return response.status(400).json({
-      error: "content missing",
+      error: "content is missing",
     });
   }
 
-  const note = {
-    content: body.content,
-    important: Boolean(body.important) || false,
-    id: generateId()
-  }
+  const maxId = notes.length > 0 ? Math.max(...notes.map((n) => n.id)) : 0;
 
-  notes = notes.concat(note);
-  response.json(note);
+  const newNote = {
+    id: maxId + 1,
+    content: body.content,
+    important: typeof body.important !== "undefined" ? note.important : false,
+  };
+
+  // actualizar la lista de notas del backend con la nueva nota
+  notes = [...notes, newNote];
+  response.status(201).json(newNote);
 });
 
-const PORT = process.env.PORT || 3001;
+// Definir un middleware para rutas no contempladas
+const unknownEndpoint = (request, response) => {
+  response.status(404).json({ error: "unknown endpoint" });
+};
+
+app.use(unknownEndpoint);
+
+const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
