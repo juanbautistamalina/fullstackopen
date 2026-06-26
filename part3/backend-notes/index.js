@@ -71,7 +71,7 @@ app.post("/api/notes", (request, response) => {
   const newNote = {
     id: maxId + 1,
     content: body.content,
-    important: typeof body.important !== "undefined" ? note.important : false,
+    important: typeof body.important !== "undefined" ? body.important : false,
   };
 
   // actualizar la lista de notas del backend con la nueva nota
