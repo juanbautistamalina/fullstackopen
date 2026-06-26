@@ -28,7 +28,7 @@
 
 ## 📋 Tabla de contenidos
 
-1. [Estructura del proyecto](#️-estructura-del-proyecto)
+1. [Estructura del proyecto](#1-estructura-del-proyecto)
 2. [Frontend con React](#2-frontend-con-react)
 3. [Simulando un backend con json-server](#3-simulando-un-backend-con-json-server)
 4. [Backend con Node.js y Express](#4-backend-con-nodejs-y-express)
@@ -37,7 +37,7 @@
 
 ---
 
-## 🗂️ Estructura del proyecto
+## 1. 🗂️ Estructura del proyecto
 
 La forma más ordenada de organizar una aplicación full stack es separar el frontend y el backend en carpetas independientes dentro del mismo repositorio.
 
@@ -313,7 +313,7 @@ const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`))
 ```
 
-### Organización de rutas con Router
+<!-- ### Organización de rutas con Router
 
 A medida que la app crece, conviene separar las rutas en archivos propios para mantener el código ordenado.
 
@@ -333,7 +333,7 @@ module.exports = router
 // index.js — registrar el router
 const notesRouter = require('./routes/notes')
 app.use('/api/notes', notesRouter)
-```
+``` -->
 
 ### Middleware
 
@@ -358,6 +358,16 @@ Con el backend corriendo en `localhost:3001` y el frontend en `localhost:5173`, 
 ### ¿Qué es CORS y por qué ocurre?
 
 **CORS (Cross-Origin Resource Sharing)** es una política de seguridad del navegador. Cuando el frontend (corriendo en `localhost:5173`) intenta hacer una petición al backend (corriendo en `localhost:3001`), el navegador los considera **orígenes distintos** y bloquea la petición por defecto.
+
+Un **origen** está formado por tres partes: protocolo, host y puerto. Si cualquiera de esas tres partes cambia, el navegador lo considera un origen diferente.
+
+```
+http://localhost:5173
+  │         │      │
+protocolo  host   puerto
+```
+
+Por eso `http://localhost:5173` (frontend) y `http://localhost:3001` (backend) son orígenes distintos aunque sea la misma máquina: el puerto no coincide.
 
 El error típico que se ve en la consola es:
 
