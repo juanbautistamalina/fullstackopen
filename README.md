@@ -276,6 +276,24 @@ En `package.json`, agregar los scripts:
 }
 ```
 
+### Nodemon
+
+Por defecto, cada vez que modificamos el código del backend hay que detener el servidor (`Ctrl + C`) y volver a ejecutarlo a mano para ver los cambios. **Nodemon** elimina ese paso: detecta cambios en los archivos y reinicia el servidor automáticamente.
+
+Se instala como dependencia de desarrollo, ya que es una herramienta que solo se usa mientras programamos — no hace falta en producción:
+
+```bash
+npm install --save-dev nodemon
+```
+
+Para usarlo, en vez de ejecutar `node index.js`, se ejecuta a través del script `dev` ya definido arriba:
+
+```bash
+npm run dev
+```
+
+Con esto, cada vez que se guarda un cambio en cualquier archivo del proyecto, el servidor se reinicia solo, mostrando los logs en la consola sin intervención manual.
+
 ### Estructura básica de un servidor
 
 ```js
@@ -337,7 +355,51 @@ app.use('/api/notes', notesRouter)
 
 ### Middleware
 
-Un middleware es una función que se ejecuta **entre** la petición y la respuesta. Se usa para logging, autenticación, manejo de errores, etc.
+Un **middleware** es una función que se ejecuta **entre** la petición y la respuesta. Express procesa la petición a través de una cadena de middlewares antes (y a veces después) de que llegue a la ruta final, y cada uno decide si pasarle el control al siguiente o cortar la cadena respondiendo directamente.
+
+Un middleware en Express siempre recibe tres parámetros:
+
+```js
+const miMiddleware = (request, response, next) => {
+  // lógica del middleware
+  next() // pasa el control al siguiente middleware o a la ruta
+}
+
+app.use(miMiddleware)
+```
+
+- `request` — la petición entrante (headers, body, params, etc.)
+- `response` — lo que se va a devolver
+- `next` — función que hay que llamar para que la cadena continúe. Si no se llama, la petición se queda "colgada" sin respuesta.
+
+Se registran con `app.use(...)`, y se ejecutan en el **orden** en que se declaran — por eso el orden en que se escriben importa.
+
+**¿Para qué sirven?** Para tareas que se repiten en muchas (o todas) las rutas, evitando duplicar código: parsear el body de la petición, loggear cada petición que llega, verificar autenticación, manejar errores de forma centralizada, habilitar CORS, etc.
+
+**Middlewares más comunes:**
+
+| Middleware | Para qué sirve |
+|---|---|
+| `express.json()` | Parsea el body de la petición (JSON) y lo deja disponible en `request.body` |
+| `cors()` | Agrega las cabeceras necesarias para permitir peticiones desde otros orígenes |
+| `morgan` | Loggea cada petición HTTP que llega al servidor (método, url, status, tiempo de respuesta) |
+| `express.static('dist')` | Sirve archivos estáticos (como el build del frontend) desde una carpeta |
+| Middleware de manejo de errores | Captura errores que ocurren en las rutas y responde de forma centralizada |
+| Middleware de autenticación (propio) | Verifica un token (JWT) antes de dejar pasar la petición a rutas protegidas |
+
+Ejemplo de un middleware propio para loggear cada petición:
+
+```js
+const requestLogger = (request, response, next) => {
+  console.log('Method:', request.method)
+  console.log('Path:  ', request.path)
+  console.log('Body:  ', request.body)
+  console.log('---')
+  next()
+}
+
+app.use(requestLogger)
+```
 
 ```js
 // Middleware de manejo de errores (siempre al final, después de todas las rutas)
@@ -346,6 +408,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message })
 })
 ```
+
+> El middleware de manejo de errores es distinto a los demás: recibe **cuatro** parámetros (`err` incluido), y Express lo reconoce automáticamente como middleware de errores por esa firma. Por eso siempre se coloca al final, después de todas las rutas — solo se ejecuta cuando algo previo llama a `next(err)` o lanza una excepción.
 
 ---
 
