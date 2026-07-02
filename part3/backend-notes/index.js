@@ -1,7 +1,10 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const Note = require("./models/note");
 
+// Middlewares
 app.use(express.json());
 app.use(cors());
 app.use(express.static("dist"));
@@ -24,29 +27,24 @@ let notes = [
   },
 ];
 
-// Página Principal
+// Página Principal - NO se utiliza ya que se está sirviendo el front estático (./dist)
 app.get("/", (request, response) => {
   response.send("<h1>Notes App</h1>");
 });
 
-// Obtener Todos los recursos
+// Obtener todos los recursos
 app.get("/api/notes", (request, response) => {
-  response.json(notes);
+  Note.find({}).then((notes) => response.json(notes));
 });
 
 // Obtener un solo recurso
 app.get("/api/notes/:id", (request, response) => {
-  const id = Number(request.params.id);
-  const note = notes.find((note) => note.id === id);
-
-  if (note) {
+  Note.findById(request.params.id).then((note) => {
     response.json(note);
-  } else {
-    response.status(404).end();
-  }
+  });
 });
 
-// Eliminar un recurso
+// Eliminar un recurso (PENDIENTE)
 app.delete("/api/notes/:id", (request, response) => {
   const id = Number(request.params.id);
   notes = notes.filter((note) => note.id !== id);
@@ -66,17 +64,16 @@ app.post("/api/notes", (request, response) => {
     });
   }
 
-  const maxId = notes.length > 0 ? Math.max(...notes.map((n) => n.id)) : 0;
-
-  const newNote = {
-    id: maxId + 1,
+  // Crear una nueva nota usando el modelo
+  const note = new Note({
     content: body.content,
-    important: typeof body.important !== "undefined" ? body.important : false,
-  };
+    important: body.important || false,
+  });
 
-  // actualizar la lista de notas del backend con la nueva nota
-  notes = [...notes, newNote];
-  response.status(201).json(newNote);
+  // Guardar la nueva nota en la base de datos
+  note.save().then((savedNote) => {
+    response.json(savedNote);
+  });
 });
 
 // Definir un middleware para rutas no contempladas
@@ -86,7 +83,7 @@ const unknownEndpoint = (request, response) => {
 
 app.use(unknownEndpoint);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
