@@ -1,14 +1,7 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
 
-if (process.argv.length < 3) {
-  console.log("give password as argument");
-  process.exit(1);
-}
-
-const password = process.argv[2];
-
-const url = `${process.env.MONGODB_BASE_URL}${password}@cluster0.nz96pis.mongodb.net/noteApp?appName=Cluster0`;
+const url = process.env.MONGODB_URI
 mongoose.set("strictQuery", false);
 
 // Abrir la conexión a la base de datos
