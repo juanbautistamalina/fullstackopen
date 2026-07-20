@@ -44,24 +44,19 @@ app.delete("/api/notes/:id", (request, response, next) => {
 });
 
 // Actualizar un recurso
-app.put('/api/notes/:id', (request, response, next) => {
-  const body = request.body
+app.put("/api/notes/:id", (request, response, next) => {
+  const {content, important} = request.body;
 
-  const note = {
-    content: body.content,
-    important: body.important,
-  }
-
-  Note.findByIdAndUpdate(request.params.id, note, { new: true })
-    .then(updatedNote => {
-      response.json(updatedNote)
-    })
-    .catch(error => next(error))
-})
+  Note.findByIdAndUpdate(
+    request.params.id, 
+    {content, important}, 
+    { new: true, runValidators: true, context: "query"})
+    .then((updatedNote) => response.json(updatedNote))
+    .catch((error) => next(error));
+});
 
 // Agregar un nuevo recurso
-app.post("/api/notes", (request, response) => {
-
+app.post("/api/notes", (request, response, next) => {
   // Obtener la información enviada en el body de la petición
   const body = request.body;
 
@@ -79,9 +74,10 @@ app.post("/api/notes", (request, response) => {
   });
 
   // Guardar la nueva nota en la base de datos
-  note.save().then((savedNote) => {
-    response.json(savedNote);
-  });
+  note
+    .save()
+    .then((savedNote) => response.json(savedNote))
+    .catch((error) => next(error));
 });
 
 // Middleware de rutas no contempladas
@@ -97,6 +93,8 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === "CastError") {
     return response.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message });
   }
 
   next(error);
