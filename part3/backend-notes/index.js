@@ -37,20 +37,18 @@ app.get("/api/notes/:id", (request, response, next) => {
 // Eliminar un recurso
 app.delete("/api/notes/:id", (request, response, next) => {
   Note.findByIdAndDelete(request.params.id)
-    .then((result) => {
-      response.status(204).end();
-    })
+    .then(() => response.status(204).end())
     .catch((error) => next(error));
 });
 
 // Actualizar un recurso
 app.put("/api/notes/:id", (request, response, next) => {
-  const {content, important} = request.body;
+  const { content, important } = request.body;
 
   Note.findByIdAndUpdate(
-    request.params.id, 
-    {content, important}, 
-    { new: true, runValidators: true, context: "query"})
+    request.params.id,
+    { content, important },
+    { new: true, runValidators: true, context: "query" })
     .then((updatedNote) => response.json(updatedNote))
     .catch((error) => next(error));
 });
