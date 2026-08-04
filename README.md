@@ -16,13 +16,21 @@
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 
 ---
 
-## 📕 Documentación oficial
+## 📕 Recursos
+
+**Documentación oficial**
 - [Documentación de React](https://react.dev/)
 - [Documentación de Node.js](https://nodejs.org/en/docs/)
 - [Documentación de Express](https://expressjs.com/)
+- [Documentación de Mongoose](https://mongoosejs.com/docs/)
+- [Documentación de MongoDB](https://www.mongodb.com/docs/)
+
+**Herramientas útiles**
+- [http.cat](https://http.cat/) — referencia visual de códigos de estado HTTP
 
 ---
 
@@ -32,8 +40,10 @@
 2. [Frontend con React](#2-frontend-con-react)
 3. [Simulando un backend con json-server](#3-simulando-un-backend-con-json-server)
 4. [Backend con Node.js y Express](#4-backend-con-nodejs-y-express)
-5. [Conectando frontend y backend](#5-conectando-frontend-y-backend)
-6. [Subir la aplicación a internet](#6-subir-la-aplicación-a-internet)
+5. [MongoDB](#5-mongodb)
+6. [Conectando frontend y backend](#6-conectando-frontend-y-backend)
+7. [Subir la aplicación a internet](#7-subir-la-aplicación-a-internet)
+8. [ESLint](#8-eslint)
 
 ---
 
@@ -59,13 +69,12 @@ notes-app/
 │   └── package.json
 │
 ├── backend/
-│   ├── prisma/
-│   │   └── schema.prisma      # Modelos de la base de datos
+│   ├── models/                # Modelos de Mongoose (Note.js, User.js...)
 │   ├── routes/                # Rutas por recurso (notes.js, users.js...)
 │   ├── middleware/            # Middlewares propios (auth.js, errorHandler.js...)
 │   ├── controllers/           # Lógica de cada ruta (opcional)
 │   ├── index.js               # Punto de entrada del servidor
-│   ├── .env                   # DATABASE_URL, JWT_SECRET, PORT
+│   ├── .env                   # MONGODB_URI, JWT_SECRET, PORT
 │   └── package.json
 │
 ├── .gitignore
@@ -263,7 +272,7 @@ El backend expone una **API REST**: recibe peticiones HTTP del frontend, las pro
 ```bash
 mkdir backend && cd backend
 npm init -y
-npm install express cors dotenv
+npm install express cors dotenv mongoose
 npm install --save-dev nodemon
 ```
 
@@ -276,23 +285,52 @@ En `package.json`, agregar los scripts:
 }
 ```
 
+### Variables de entorno
+
+Las variables de entorno son valores de configuración que no deben estar hardcodeados en el código ni subidos al repositorio: strings de conexión a la base de datos, claves secretas, puertos, URLs externas, etc.
+
+Se guardan en un archivo `.env` en la raíz del proyecto (que va en el `.gitignore`) y se cargan con la librería `dotenv`:
+
+```bash
+# .env
+PORT=3001
+MONGODB_URI=mongodb+srv://usuario:contraseña@cluster.mongodb.net/notes
+JWT_SECRET=a8f5f167f44f4964e6c998dee8ae7110fad07971d648bfa254bebe3daab1cf59
+```
+
+```js
+// index.js — debe ser la primera línea antes de cualquier uso de variables de entorno
+require('dotenv').config()
+
+const PORT = process.env.PORT        // "3001"
+const uri  = process.env.MONGODB_URI // la uri de conexión
+```
+
+**¿Qué va en el `.env`?**
+
+| Variable | Para qué |
+|---|---|
+| `PORT` | Puerto en el que corre el servidor |
+| `MONGODB_URI` | String de conexión a la base de datos |
+| `JWT_SECRET` | Clave para firmar y verificar tokens de autenticación |
+| `VITE_API_URL` | (frontend) URL del backend durante desarrollo |
+
+> Cuando deployás en Render o Railway, estas variables se cargan desde el panel de configuración de la plataforma — el archivo `.env` no se sube ni se necesita en producción.
+
 ### Nodemon
 
-Por defecto, cada vez que modificamos el código del backend hay que detener el servidor (`Ctrl + C`) y volver a ejecutarlo a mano para ver los cambios. **Nodemon** elimina ese paso: detecta cambios en los archivos y reinicia el servidor automáticamente.
+Por defecto, cada vez que modificamos el código del backend hay que detener el servidor y volver a ejecutarlo a mano para ver los cambios. **Nodemon** detecta cambios en los archivos y reinicia el servidor automáticamente.
 
-Se instala como dependencia de desarrollo, ya que es una herramienta que solo se usa mientras programamos — no hace falta en producción:
+Se instala como dependencia de desarrollo, ya que solo se usa mientras programamos:
 
 ```bash
 npm install --save-dev nodemon
 ```
 
-Para usarlo, en vez de ejecutar `node index.js`, se ejecuta a través del script `dev` ya definido arriba:
-
 ```bash
-npm run dev
+npm run dev   # usa nodemon — para desarrollo
+npm start     # usa node — para producción
 ```
-
-Con esto, cada vez que se guarda un cambio en cualquier archivo del proyecto, el servidor se reinicia solo, mostrando los logs en la consola sin intervención manual.
 
 ### Estructura básica de un servidor
 
@@ -331,33 +369,9 @@ const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`))
 ```
 
-<!-- ### Organización de rutas con Router
-
-A medida que la app crece, conviene separar las rutas en archivos propios para mantener el código ordenado.
-
-```js
-// routes/notes.js
-const router = require('express').Router()
-
-router.get('/', (req, res) => { /* devolver todas las notas */ })
-router.post('/', (req, res) => { /* crear una nota */ })
-router.put('/:id', (req, res) => { /* actualizar una nota */ })
-router.delete('/:id', (req, res) => { /* eliminar una nota */ })
-
-module.exports = router
-```
-
-```js
-// index.js — registrar el router
-const notesRouter = require('./routes/notes')
-app.use('/api/notes', notesRouter)
-``` -->
-
 ### Middleware
 
-Un **middleware** es una función que se ejecuta **entre** la petición y la respuesta. Express procesa la petición a través de una cadena de middlewares antes (y a veces después) de que llegue a la ruta final, y cada uno decide si pasarle el control al siguiente o cortar la cadena respondiendo directamente.
-
-Un middleware en Express siempre recibe tres parámetros:
+Un **middleware** es una función que se ejecuta **entre** la petición y la respuesta. Express procesa la petición a través de una cadena de middlewares antes de que llegue a la ruta final, y cada uno decide si pasarle el control al siguiente o cortar la cadena respondiendo directamente.
 
 ```js
 const miMiddleware = (request, response, next) => {
@@ -370,54 +384,235 @@ app.use(miMiddleware)
 
 - `request` — la petición entrante (headers, body, params, etc.)
 - `response` — lo que se va a devolver
-- `next` — función que hay que llamar para que la cadena continúe. Si no se llama, la petición se queda "colgada" sin respuesta.
+- `next` — función que hay que llamar para que la cadena continúe
 
-Se registran con `app.use(...)`, y se ejecutan en el **orden** en que se declaran — por eso el orden en que se escriben importa.
-
-**¿Para qué sirven?** Para tareas que se repiten en muchas (o todas) las rutas, evitando duplicar código: parsear el body de la petición, loggear cada petición que llega, verificar autenticación, manejar errores de forma centralizada, habilitar CORS, etc.
+Se registran con `app.use(...)` y se ejecutan en el **orden** en que se declaran.
 
 **Middlewares más comunes:**
 
 | Middleware | Para qué sirve |
 |---|---|
-| `express.json()` | Parsea el body de la petición (JSON) y lo deja disponible en `request.body` |
-| `cors()` | Agrega las cabeceras necesarias para permitir peticiones desde otros orígenes |
-| `morgan` | Loggea cada petición HTTP que llega al servidor (método, url, status, tiempo de respuesta) |
-| `express.static('dist')` | Sirve archivos estáticos (como el build del frontend) desde una carpeta |
-| Middleware de manejo de errores | Captura errores que ocurren en las rutas y responde de forma centralizada |
-| Middleware de autenticación (propio) | Verifica un token (JWT) antes de dejar pasar la petición a rutas protegidas |
-
-Ejemplo de un middleware propio para loggear cada petición:
-
-```js
-const requestLogger = (request, response, next) => {
-  console.log('Method:', request.method)
-  console.log('Path:  ', request.path)
-  console.log('Body:  ', request.body)
-  console.log('---')
-  next()
-}
-
-app.use(requestLogger)
-```
+| `express.json()` | Parsea el body de la petición y lo deja disponible en `request.body` |
+| `cors()` | Permite peticiones desde otros orígenes |
+| `express.static('dist')` | Sirve el build del frontend como archivos estáticos |
+| Middleware de errores | Captura errores y responde de forma centralizada |
+| Middleware de autenticación | Verifica un token JWT antes de dejar pasar la petición |
 
 ```js
 // Middleware de manejo de errores (siempre al final, después de todas las rutas)
+// Se reconoce por tener 4 parámetros — Express lo detecta automáticamente
 app.use((err, req, res, next) => {
   console.error(err.message)
   res.status(500).json({ error: err.message })
 })
 ```
 
-> El middleware de manejo de errores es distinto a los demás: recibe **cuatro** parámetros (`err` incluido), y Express lo reconoce automáticamente como middleware de errores por esa firma. Por eso siempre se coloca al final, después de todas las rutas — solo se ejecuta cuando algo previo llama a `next(err)` o lanza una excepción.
+### Depuración
+
+Cuando algo no funciona en el backend, hay varias formas de investigar qué está pasando, de más simple a más completa:
+
+**1. `console.log`** — la forma más directa. Imprime el valor de variables, el body de una petición, el resultado de una consulta, etc. Suficiente para la mayoría de los casos.
+
+```js
+app.post('/api/notes', (req, res) => {
+  console.log('Body recibido:', req.body) // ¿llegó lo que esperaba?
+  // ...
+})
+```
+
+**2. Inspector de Node** — permite usar las DevTools del navegador para depurar el backend como si fuera código de frontend: breakpoints, inspección de variables, call stack, etc.
+
+```bash
+node --inspect index.js
+# o con nodemon:
+nodemon --inspect index.js
+```
+
+Luego abrir Chrome y navegar a `chrome://inspect` → clic en **Open dedicated DevTools for Node**.
+
+**3. Debugger integrado de VS Code** — la opción más cómoda si usás VS Code. Crear un archivo `.vscode/launch.json`:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug backend",
+      "program": "${workspaceFolder}/backend/index.js",
+      "restart": true,
+      "runtimeExecutable": "nodemon",
+      "console": "integratedTerminal"
+    }
+  ]
+}
+```
+
+Con esto, apretando `F5` en VS Code arranca el servidor en modo debug con nodemon, y podés poner breakpoints directamente en el editor.
 
 ---
 
-Con el backend corriendo en `localhost:3001` y el frontend en `localhost:5173`, surge un problema: el navegador bloquea las peticiones entre orígenes distintos. Eso es CORS.
+## 5. MongoDB
+
+Hasta ahora los datos del backend se guardaban en una variable (`let notes = [...]`), lo que significa que se pierden cada vez que el servidor se reinicia. Para persistir los datos necesitamos una base de datos.
+
+**MongoDB** es una base de datos **NoSQL orientada a documentos**: en lugar de guardar datos en tablas con filas y columnas como SQL, los guarda en **documentos** con formato similar a JSON. Es flexible, no requiere un schema fijo, y se integra de forma natural con JavaScript.
+
+Para interactuar con MongoDB desde Node.js se usa **Mongoose**, una librería que actúa como ODM (Object Document Mapper): permite definir la estructura de los datos mediante schemas y modelos, y ofrece métodos para hacer consultas de forma sencilla.
+
+### De qué se compone
+
+**Colección** — el equivalente a una tabla en SQL. Agrupa documentos del mismo tipo. Por ejemplo, la colección `notes` contiene todas las notas de la app.
+
+**Documento** — el equivalente a una fila. Es un objeto JSON con los datos de un registro particular:
+
+```json
+{
+  "_id": "64a1f2e3b5c4d8e9f0a1b2c3",
+  "content": "HTML es fácil",
+  "important": true
+}
+```
+
+**Schema** — define la estructura que deben tener los documentos de una colección: qué campos tienen, de qué tipo son, si son obligatorios, valores por defecto, etc.
+
+**Modelo** — es la interfaz que Mongoose genera a partir del schema para interactuar con la colección. A través del modelo se hacen todas las operaciones: crear, leer, actualizar y eliminar documentos.
+
+### MongoDB Atlas
+
+En lugar de instalar MongoDB localmente, se usa **MongoDB Atlas**: una plataforma cloud que ofrece una base de datos MongoDB lista para usar, con plan gratuito incluido.
+
+1. Crear una cuenta en [mongodb.com/atlas](https://www.mongodb.com/atlas)
+2. Crear un **cluster** gratuito (M0)
+3. En **Database Access**: crear un usuario con contraseña
+4. En **Network Access**: agregar `0.0.0.0/0` para permitir conexiones desde cualquier IP
+5. En **Connect → Drivers**: copiar la URI de conexión
+
+La URI tiene esta forma:
+```
+mongodb+srv://usuario:contraseña@cluster.mongodb.net/notes?retryWrites=true&w=majority
+```
+
+Esa URI va en el `.env` como `MONGODB_URI` — nunca hardcodeada en el código.
+
+### Conectar el backend con MongoDB
+
+```bash
+npm install mongoose
+```
+
+```js
+// index.js
+const mongoose = require('mongoose')
+require('dotenv').config()
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Conectado a MongoDB'))
+  .catch(err => console.error('Error al conectar:', err.message))
+```
+
+### Definir el Schema y el Modelo
+
+Los modelos van en archivos separados dentro de la carpeta `models/`.
+
+```js
+// models/Note.js
+const mongoose = require('mongoose')
+
+// 1. Definir el schema — la estructura del documento
+const noteSchema = new mongoose.Schema({
+  content: {
+    type: String,
+    required: true,   // campo obligatorio
+    minlength: 5      // validación: mínimo 5 caracteres
+  },
+  important: {
+    type: Boolean,
+    default: false    // si no se envía, se guarda como false
+  }
+})
+
+// 2. Ajuste opcional: transformar _id (ObjectId) a string "id" al serializar a JSON
+noteSchema.set('toJSON', {
+  transform: (document, returnedObject) => {
+    returnedObject.id = returnedObject._id.toString()
+    delete returnedObject._id
+    delete returnedObject.__v
+  }
+})
+
+// 3. Crear y exportar el modelo
+const Note = mongoose.model('Note', noteSchema)
+
+module.exports = Note
+```
+
+### Operaciones CRUD con Mongoose
+
+```js
+const Note = require('./models/Note')
+
+// CREATE — guardar una nota nueva
+const note = new Note({ content: 'HTML es fácil', important: true })
+await note.save()
+
+// READ — traer todas las notas
+const notes = await Note.find({})
+
+// READ — traer una sola nota por id
+const note = await Note.findById(id)
+
+// UPDATE — actualizar una nota
+const updated = await Note.findByIdAndUpdate(
+  id,
+  { important: true },
+  { new: true }          // devuelve el documento actualizado, no el original
+)
+
+// DELETE — eliminar una nota
+await Note.findByIdAndDelete(id)
+```
+
+### Manejo de errores y middleware de errores
+
+Las operaciones de Mongoose pueden fallar por distintas razones: id con formato inválido, validación que no pasa, problema de conexión, etc. En lugar de manejar cada error dentro de cada ruta, se centraliza en un **middleware de errores** al final del `index.js`.
+
+Para pasarle un error al middleware desde una ruta, se usa `next(error)`:
+
+```js
+app.get('/api/notes/:id', async (req, res, next) => {
+  try {
+    const note = await Note.findById(req.params.id)
+    if (!note) return res.status(404).json({ error: 'nota no encontrada' })
+    res.json(note)
+  } catch (error) {
+    next(error) // pasa el error al middleware de errores
+  }
+})
+```
+
+```js
+// Middleware de errores — al final, después de todas las rutas
+app.use((error, req, res, next) => {
+  // ID con formato inválido para MongoDB
+  if (error.name === 'CastError') {
+    return res.status(400).json({ error: 'id con formato inválido' })
+  }
+
+  // Error de validación de Mongoose (campo requerido, minlength, etc.)
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({ error: error.message })
+  }
+
+  // Error genérico
+  res.status(500).json({ error: error.message })
+})
+```
 
 ---
 
-## 5. Conectando frontend y backend
+## 6. Conectando frontend y backend
 
 ### ¿Qué es CORS y por qué ocurre?
 
@@ -443,7 +638,6 @@ from origin 'http://localhost:5173' has been blocked by CORS policy.
 **La solución:** instalar el middleware `cors` en el backend para que acepte peticiones desde otros orígenes.
 
 ```bash
-# En el backend
 npm install cors
 ```
 
@@ -454,52 +648,64 @@ app.use(cors()) // Permite peticiones desde cualquier origen
 
 Esto ya estaba incluido en la estructura básica del servidor de arriba. Lo importante es entender **por qué está**: sin esa línea, el frontend no puede hablar con el backend durante el desarrollo.
 
+### El proxy de Vite
+
+Hay un problema que aparece después de tener todo funcionando en producción. Cuando el backend sirve el frontend como archivos estáticos (`app.use(express.static('dist'))`), ambos corren en el **mismo origen** — por ejemplo `http://localhost:3001`. Por eso, en el código del frontend, la URL al backend se deja como ruta relativa: `/api/notes`, sin protocolo ni puerto.
+
+El problema aparece cuando volvés a trabajar en el frontend con `npm run dev`. Ahí el frontend corre en `http://localhost:5173`, mientras el backend sigue en `http://localhost:3001`. Son orígenes distintos otra vez, y la ruta `/api/notes` ahora apunta a `localhost:5173/api/notes` — un endpoint que no existe ahí.
+
+La solución es configurar un **proxy** en Vite: le decimos que redirija automáticamente cualquier petición a `/api` hacia `localhost:3001`.
+
+```js
+// vite.config.js
+export default {
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  }
+}
+```
+
+Con esto, el código del frontend puede usar `/api/notes` tanto en desarrollo como en producción, sin cambiar nada entre los dos casos.
+
 ---
 
-Una vez que el backend funciona correctamente con el frontend en desarrollo, el siguiente paso es preparar la aplicación para producción — es decir, unir todo en un solo servidor listo para subir a internet.
+Una vez que el backend funciona correctamente con el frontend en desarrollo, el siguiente paso es preparar la aplicación para producción.
 
 ### Frontend Production Build
-
-Cuando la aplicación está lista para publicarse, el frontend necesita ser **compilado**. Este proceso convierte todo el código React (JSX, módulos, etc.) en archivos HTML, CSS y JavaScript estáticos optimizados para el navegador.
 
 ```bash
 # Dentro de la carpeta frontend/
 npm run build
 ```
 
-Esto genera una carpeta `dist/` con los archivos listos para producción. Esos archivos son los que el usuario final recibe cuando visita la app.
+Esto genera una carpeta `dist/` con los archivos listos para producción.
 
 ### Sirviendo el frontend desde el backend
-
-En producción, no corremos dos servidores separados. En cambio, el backend de Express sirve también los archivos estáticos del frontend. Esto simplifica el deploy: un solo servidor, una sola URL.
-
-Para lograrlo, copiamos (o apuntamos) la carpeta `dist/` del frontend al backend, y agregamos esta línea en `index.js`:
 
 ```js
 app.use(express.static('dist'))
 ```
 
-Con esto, cuando alguien visita la URL raíz del servidor (por ejemplo `https://mi-app.onrender.com`), Express devuelve el `index.html` del frontend. Y cuando el frontend hace peticiones a `/api/notes`, el mismo servidor las responde. Todo desde un solo proceso.
+Con esto, Express sirve el frontend y responde las peticiones a `/api/notes` desde el mismo proceso. Un solo servidor, una sola URL.
 
 > En desarrollo seguimos corriendo los dos servidores por separado. Este paso es solo para producción.
 
 ---
 
-Con la app lista y funcionando localmente en modo producción, el paso final es subirla a internet.
+## 7. Subir la aplicación a internet
 
----
-
-## 6. Subir la aplicación a internet
-
-Para publicar la aplicación se usa un **PaaS (Platform as a Service)**: una plataforma que se encarga de correr el servidor, sin necesidad de configurar infraestructura propia. Las más usadas por la comunidad en 2026 que ofrecen plan gratuito son:
+Para publicar la aplicación se usa un **PaaS (Platform as a Service)**. Las más usadas en 2026 con plan gratuito:
 
 | Plataforma | Qué ofrece gratis |
 |---|---|
-| [Render](https://render.com/) | Web services, bases de datos PostgreSQL (90 días), deploy desde GitHub |
-| [Railway](https://railway.app/) | $5 de crédito mensual, PostgreSQL incluido, muy simple de configurar |
-| [Fly.io](https://fly.io/) | Hasta 3 VMs pequeñas, buena performance, requiere CLI |
-
-> Full Stack Open menciona también Cyclic, Replit y CodeSandbox, pero hoy en día **Render** y **Railway** son las opciones más usadas para proyectos Node.js + PostgreSQL.
+| [Render](https://render.com/) | Web services, deploy desde GitHub |
+| [Railway](https://railway.app/) | $5 de crédito mensual, muy simple de configurar |
+| [Fly.io](https://fly.io/) | Hasta 3 VMs pequeñas, requiere CLI |
 
 ### Deploy en Render (recomendado para empezar)
 
@@ -511,12 +717,67 @@ Para publicar la aplicación se usa un **PaaS (Platform as a Service)**: una pla
 4. En **Environment Variables**, agregar las variables del `.env`:
    ```
    PORT=3001
-   DATABASE_URL=...
+   MONGODB_URI=mongodb+srv://...
    JWT_SECRET=...
    ```
-5. Hacer click en **Deploy**. Render detecta los cambios en `main` y redeploya automáticamente.
+5. Hacer click en **Deploy**. Render redeploya automáticamente con cada push a `main`.
 
-La URL pública que genera Render (por ejemplo `https://notes-app.onrender.com`) es la dirección final de la aplicación. Esa misma URL va en la variable de entorno del frontend si usás Vercel para el frontend por separado, o simplemente es la URL que el usuario visita si servís el frontend desde el backend como se explicó arriba.
+---
+
+## 8. ESLint
+
+A medida que el proyecto crece, es fácil introducir inconsistencias en el código: variables declaradas pero no usadas, comparaciones con `==` en lugar de `===`, estilos distintos entre archivos, etc. **ESLint** es una herramienta que analiza el código estáticamente y señala estos problemas antes de que se conviertan en bugs — sin necesidad de ejecutar el programa.
+
+### Instalación
+
+```bash
+# En el backend
+npm install --save-dev eslint @eslint/js
+
+# Inicializar la configuración
+npx eslint --init
+```
+
+El comando `--init` hace algunas preguntas (¿es un proyecto de Node?, ¿usás módulos ES o CommonJS?, etc.) y genera el archivo de configuración automáticamente.
+
+### Configuración básica (`eslint.config.mjs`)
+
+```js
+import js from '@eslint/js'
+
+export default [
+  js.configs.recommended,
+  {
+    rules: {
+      'eqeqeq': 'error',        // obliga a usar === en lugar de ==
+      'no-console': 'warn',     // avisa cuando hay console.log (útil en prod)
+      'no-unused-vars': 'warn'  // avisa sobre variables declaradas pero no usadas
+    }
+  }
+]
+```
+
+### Agregar el script en `package.json`
+
+```json
+"scripts": {
+  "dev": "nodemon index.js",
+  "start": "node index.js",
+  "lint": "eslint ."
+}
+```
+
+```bash
+npm run lint   # analiza todos los archivos del proyecto
+```
+
+### ESLint en el frontend (Vite ya lo incluye)
+
+Cuando creás un proyecto con Vite, ESLint ya viene preconfigurado con reglas básicas para React. Podés extenderlo agregando reglas propias en el archivo `eslint.config.js` que Vite genera.
+
+### Integración con VS Code
+
+Instalar la extensión **ESLint** de VS Code para ver los errores subrayados directamente en el editor, sin necesidad de correr `npm run lint` manualmente.
 
 ---
 
